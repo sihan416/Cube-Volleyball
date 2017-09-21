@@ -44,7 +44,7 @@ glm::mat4 Scene::Transform::make_world_to_local() const {
 //---------------------------
 
 glm::mat4 Scene::Camera::make_projection() const {
-	return glm::infinitePerspective( fovy, aspect, near );
+	return glm::infinitePerspective( fovy, aspect, near_plane );
 }
 
 //---------------------------

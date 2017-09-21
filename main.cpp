@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
 	GLuint program = 0;
 	GLuint program_Position = 0;
 	GLuint program_Normal = 0;
+	GLuint program_Color = 0;
 	GLuint program_mvp = 0;
 	GLuint program_itmv = 0;
 	GLuint program_to_light = 0;
@@ -100,10 +101,13 @@ int main(int argc, char **argv) {
 			"uniform mat3 itmv;\n"
 			"in vec4 Position;\n"
 			"in vec3 Normal;\n"
+			"in vec3 Color;\n"
 			"out vec3 normal;\n"
+			"out vec3 color;\n"
 			"void main() {\n"
 			"	gl_Position = mvp * Position;\n"
 			"	normal = itmv * Normal;\n"
+			"   color = Color;\n"
 			"}\n"
 		);
 
@@ -111,10 +115,11 @@ int main(int argc, char **argv) {
 			"#version 330\n"
 			"uniform vec3 to_light;\n"
 			"in vec3 normal;\n"
+			"in vec3 color;\n"
 			"out vec4 fragColor;\n"
 			"void main() {\n"
 			"	float light = max(0.0, dot(normalize(normal), to_light));\n"
-			"	fragColor = vec4(light * vec3(1.0, 1.0, 1.0), 1.0);\n"
+			"	fragColor = vec4(light * color, 1.0);\n"
 			"}\n"
 		);
 
@@ -125,36 +130,37 @@ int main(int argc, char **argv) {
 		if (program_Position == -1U) throw std::runtime_error("no attribute named Position");
 		program_Normal = glGetAttribLocation(program, "Normal");
 		if (program_Normal == -1U) throw std::runtime_error("no attribute named Normal");
+		program_Color = glGetAttribLocation(program, "Color");
+		if (program_Color == -1U) throw std::runtime_error("no attribute named Color");
 
 		//look up uniform locations:
 		program_mvp = glGetUniformLocation(program, "mvp");
 		if (program_mvp == -1U) throw std::runtime_error("no uniform named mvp");
 		program_itmv = glGetUniformLocation(program, "itmv");
 		if (program_itmv == -1U) throw std::runtime_error("no uniform named itmv");
-
+		
 		program_to_light = glGetUniformLocation(program, "to_light");
 		if (program_to_light == -1U) throw std::runtime_error("no uniform named to_light");
 	}
-
+	
 	//------------ meshes ------------
-
 	Meshes meshes;
 
 	{ //add meshes to database:
 		Meshes::Attributes attributes;
 		attributes.Position = program_Position;
 		attributes.Normal = program_Normal;
-
+		attributes.Color = program_Color;
+		
 		meshes.load("meshes.blob", attributes);
 	}
-	
-	//------------ scene ------------
 
+	//------------ scene ------------
 	Scene scene;
 	//set up camera parameters based on window:
 	scene.camera.fovy = glm::radians(60.0f);
 	scene.camera.aspect = float(config.size.x) / float(config.size.y);
-	scene.camera.near = 0.01f;
+	scene.camera.near_plane = 0.01f;
 	//(transform will be handled in the update function below)
 
 	//add some objects from the mesh library:
@@ -179,6 +185,7 @@ int main(int argc, char **argv) {
 	add_object("Tree", glm::vec3(0.0f, 1.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
 	add_object("Tree", glm::vec3(1.0f, 1.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
 */
+	
 	{ //read objects to add from "scene.blob":
 		std::ifstream file("scene.blob", std::ios::binary);
 
@@ -212,8 +219,8 @@ int main(int argc, char **argv) {
 	glm::vec2 mouse = glm::vec2(0.0f, 0.0f); //mouse position in [-1,1]x[-1,1] coordinates
 
 	struct {
-		float radius = 5.0f;
-		float elevation = 0.0f;
+		float radius = 10.0f;
+		float elevation = -5.0f;
 		float azimuth = 0.0f;
 		glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
 	} camera;
@@ -251,7 +258,7 @@ int main(int argc, char **argv) {
 		{ //update game state:
 			static float spin = 0.0f;
 
-			spin += elapsed * (2.0f * M_PI) / 10.0f;
+			spin += (float)(elapsed * (2.0f * M_PI) / 10.0f);
 
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),

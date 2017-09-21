@@ -3,3 +3,10 @@ dist/main.exe
 objs
 dist/SDL2.dll
 kit-libs-*
+*.ipch
+*.sqlite
+*.json
+*.exe
+*.opendb
+*.db
+.vs/15-466-f17-base2/v15/.suo

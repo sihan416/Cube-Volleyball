@@ -17,11 +17,13 @@ void Meshes::load(std::string const &filename, Attributes const &attributes) {
 		struct v3n3 {
 			glm::vec3 v;
 			glm::vec3 n;
+			glm::vec3 c;
 		};
-		static_assert(sizeof(v3n3) == 24, "v3n3 is packed");
+		
+		static_assert(sizeof(v3n3) == 36, "v3n3 is packed");
 		std::vector< v3n3 > data;
 		read_chunk(file, "v3n3", &data);
-
+		std::cout << "reached";
 		//upload data:
 		GLuint buffer = 0;
 		glGenBuffers(1, &buffer);
@@ -29,7 +31,7 @@ void Meshes::load(std::string const &filename, Attributes const &attributes) {
 		glBufferData(GL_ARRAY_BUFFER, sizeof(v3n3) * data.size(), &data[0], GL_STATIC_DRAW);
 
 		total = data.size(); //store total for later checks on index
-
+		
 		//store binding:
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
@@ -37,16 +39,23 @@ void Meshes::load(std::string const &filename, Attributes const &attributes) {
 			glVertexAttribPointer(attributes.Position, 3, GL_FLOAT, GL_FALSE, sizeof(v3n3), (GLbyte *)0);
 			glEnableVertexAttribArray(attributes.Position);
 		} else {
-			std::cerr << "WARNING: loading v3n3 data from '" << filename << "', but not using the Position attribute." << std::endl;
+			std::cerr << "WARNING: loading v3n3 data from '" << filename.c_str() << "', but not using the Position attribute." << std::endl;
 		}
 		if (attributes.Normal != -1U) {
 			glVertexAttribPointer(attributes.Normal, 3, GL_FLOAT, GL_FALSE, sizeof(v3n3), (GLbyte *)0 + sizeof(glm::vec3));
 			glEnableVertexAttribArray(attributes.Normal);
 		} else {
-			std::cerr << "WARNING: loading v3n3 data from '" << filename << "', but not using the Normal attribute." << std::endl;
+			std::cerr << "WARNING: loading v3n3 data from '" << filename.c_str() << "', but not using the Normal attribute." << std::endl;
+		}
+		if (attributes.Color != -1U) {
+			glVertexAttribPointer(attributes.Color, 3, GL_FLOAT, GL_FALSE, sizeof(v3n3), (GLbyte *)0 + 2 * sizeof(glm::vec3));
+			glEnableVertexAttribArray(attributes.Color);
+		}
+		else {
+			std::cerr << "WARNING: loading v3n3 data from '" << filename.c_str() << "', but not using the Color attribute." << std::endl;
 		}
 	}
-
+	
 	std::vector< char > strings;
 	read_chunk(file, "str0", &strings);
 
@@ -74,13 +83,13 @@ void Meshes::load(std::string const &filename, Attributes const &attributes) {
 			mesh.count = entry.vertex_count;
 			bool inserted = meshes.insert(std::make_pair(name, mesh)).second;
 			if (!inserted) {
-				std::cerr << "WARNING: mesh name '" + name + "' in filename '" + filename + "' collides with existing mesh." << std::endl;
+				std::cerr << "WARNING: mesh name '" << name.c_str() << "' in filename '" << filename.c_str() << "' collides with existing mesh." << std::endl;
 			}
 		}
 	}
 
 	if (file.peek() != EOF) {
-		std::cerr << "WARNING: trailing data in mesh file '" + filename + "'" << std::endl;
+		std::cerr << "WARNING: trailing data in mesh file '" << filename.c_str() << "'" << std::endl;
 	}
 }
 

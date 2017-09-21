@@ -12,15 +12,28 @@ import sys
 import bpy
 import struct
 
-bpy.ops.wm.open_mainfile(filepath='island.blend')
+bpy.ops.wm.open_mainfile(filepath='robot.blend')
 
 #names of objects whose meshes to write (not actually the names of the meshes):
 to_write = [
-	'House',
-	'Land',
-	'Tree',
-	'Water',
-	'Rock',
+	'Base',
+	'Stand',
+	'Link1',
+	'Link2',
+	'Link3',
+	'Cube.001',
+	'Crate',
+	'Crate.001',
+	'Crate.002',
+	'Crate.003',
+	'Crate.004',
+	'Crate.005',
+	'Balloon1',
+	'Balloon1-Pop',
+	'Balloon2',
+	'Balloon2-Pop',
+	'Balloon3',
+	'Balloon3-Pop',
 ]
 
 #data contains vertex and normal data from the meshes:
@@ -35,7 +48,7 @@ index = b''
 vertex_count = 0
 for name in to_write:
 	print("Writing '" + name + "'...")
-	bpy.ops.object.mode_set(mode='OBJECT') #get out of edit mode (just in case)
+	#bpy.ops.object.mode_set(mode='OBJECT') #get out of edit mode (just in case)
 	assert(name in bpy.data.objects)
 	obj = bpy.data.objects[name]
 
@@ -57,7 +70,6 @@ for name in to_write:
 	#compute normals (respecting face smoothing):
 	mesh = obj.data
 	mesh.calc_normals_split()
-
 	#record mesh name, start position and vertex count in the index:
 	name_begin = len(strings)
 	strings += bytes(name, "utf8")
@@ -79,10 +91,12 @@ for name in to_write:
 				data += struct.pack('f', x)
 			for x in loop.normal:
 				data += struct.pack('f', x)
+			for x in mesh.vertex_colors[0].data[poly.loop_indices[i]].color:
+				data += struct.pack('f', x)
 	vertex_count += len(mesh.polygons) * 3
 
 #check that we wrote as much data as anticipated:
-assert(vertex_count * (3 * 4 + 3 * 4) == len(data))
+assert(vertex_count * (3 * 4 + 3 * 4 + 3 * 4) == len(data))
 
 #write the data chunk and index chunk to an output blob:
 blob = open('../dist/meshes.blob', 'wb')
@@ -105,7 +119,7 @@ print("Wrote " + str(blob.tell()) + " bytes to meshes.blob")
 #Export scene (object positions for every object on layer one)
 
 #(re-open file because we adjusted mesh users in the export above)
-bpy.ops.wm.open_mainfile(filepath='island.blend')
+bpy.ops.wm.open_mainfile(filepath='robot.blend')
 
 #strings chunk will have names
 strings = b''

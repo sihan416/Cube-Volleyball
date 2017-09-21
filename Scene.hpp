@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <vector>
+#include <unordered_map>
 
 //Describes a 3D scene for rendering:
 struct Scene {
@@ -21,7 +22,7 @@ struct Scene {
 		//camera parameters (perspective):
 		float fovy = glm::radians(60.0f); //vertical fov (in radians)
 		float aspect = 1.0f; //x / y
-		float near = 0.01f; //near plane
+		float near_plane = 0.01f; //near plane
 		//computed from the above:
 		glm::mat4 make_projection() const;
 	};
@@ -35,6 +36,9 @@ struct Scene {
 		GLuint program = 0;
 		GLuint program_mvp = -1U; //uniform index for MVP matrix
 		GLuint program_itmv = -1U; //uniform index for inverse(transpose(mv)) matrix
+		//hierarchy info:
+		Object* parent;
+		std::unordered_map<std::string, Object*> children;
 	};
 	struct Light {
 		Transform transform;
