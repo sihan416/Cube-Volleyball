@@ -183,9 +183,6 @@ int main(int argc, char **argv) {
 		scene.objects[name] = object;
 	};
 	//Hard coding hierarchy
-	scene.objects["Link1"].transform.set_parent(&scene.objects["Base"].transform);
-	scene.objects["Link2"].transform.set_parent(&scene.objects["Link1"].transform);
-	scene.objects["Link3"].transform.set_parent(&scene.objects["Link2"].transform);
 	
 	{ //read objects to add from "scene.blob":
 		std::ifstream file("scene.blob", std::ios::binary);
@@ -216,6 +213,8 @@ int main(int argc, char **argv) {
 		}
 
 	}
+	add_object("Ballon1-Pop", glm::vec3(0.0f,0.0f,1.0f), glm::quat(0.0f,0.0f,0.0f,1.0f), glm::vec3(1.0f));
+
 	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
 		auto quart_axis = scene.objects[name].transform.make_world_to_local() * axis;
 		auto quart = scene.objects[name].transform.rotation;
@@ -241,13 +240,32 @@ int main(int argc, char **argv) {
 			rotateObj("Link3", degrees, axis);
 		}
 		if (name == "Link2") {
+			auto pos1 = scene.objects[name].transform.position;
+			auto pos2 = scene.objects[name].transform.make_world_to_local() * glm::vec4(0.0f);
+			scene.objects[name].transform.position = glm::vec3(pos2.x, pos2.y, pos2.z);
 			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link2", degrees, axis);
+			auto pos3 = scene.objects["Link3"].transform.position;
+			auto pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position,0.0f);
+			printf("link3:%f,%f,%f\n", pos3.x, pos3.y, pos3.z);
+			printf("link3:%f,%f,%f\n", pos3world.x, pos3world.y, pos3world.z);
+			auto pos2world = scene.objects["Link2"].transform.make_local_to_world() * glm::vec4(pos1,0.0f);
+			printf("link2:%f,%f,%f\n", pos1.x, pos1.y, pos1.z);
+			printf("link2:%f,%f,%f\n", pos2world.x, pos2world.y, pos2world.z);
+			pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world - pos2world);
+			scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
 			rotateObj("Link3", degrees, axis);
+			rotateObj("Link2", degrees, axis);
+			pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position, 0.0f);
+			pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world + pos2world);
+			
+			scene.objects[name].transform.position = pos1 + scene.objects[name].transform.position;
+			scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
 		}
 		if (name == "Link3") {
+			auto pos = scene.objects[name].transform.position;
 			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 			rotateObj("Link3", degrees, axis);
+			scene.objects[name].transform.position = pos;
 		}
 	};
 
@@ -293,9 +311,37 @@ int main(int argc, char **argv) {
 		previous_time = current_time;
 
 		{ //update game state:
+			auto state = SDL_GetKeyboardState(nullptr);
+			if (state[SDL_SCANCODE_X] && !state[SDL_SCANCODE_Z])
+				v1 = 0.5f;
+			else if (!state[SDL_SCANCODE_X] && state[SDL_SCANCODE_Z])
+				v1 = -0.5f;
+			else
+				v1 = 0.0f;
+			if (state[SDL_SCANCODE_S] && !state[SDL_SCANCODE_A])
+				v2 = 0.5f;
+			else if (!state[SDL_SCANCODE_S] && state[SDL_SCANCODE_A])
+				v2 = -0.5f;
+			else
+				v2 = 0.0f;
+			if (state[SDL_SCANCODE_APOSTROPHE] && !state[SDL_SCANCODE_SEMICOLON])
+				v3 = 0.5f;
+			else if (!state[SDL_SCANCODE_APOSTROPHE] && state[SDL_SCANCODE_SEMICOLON])
+				v3 = -0.5f;
+			else
+				v3 = 0.0f;
+			if (state[SDL_SCANCODE_SLASH] && !state[SDL_SCANCODE_PERIOD])
+				v4 = 0.5f;
+			else if (!state[SDL_SCANCODE_SLASH] && state[SDL_SCANCODE_PERIOD])
+				v4 = -0.5f;
+			else
+				v4 = 0.0f;
 			static float spin = 0.0f;
 			spin += (float)(elapsed * (2.0f * M_PI) / 10.0f);
-			rotate("Link1", elapsed);
+			rotate("Base", elapsed*v1);
+			rotate("Link1", elapsed*v2);
+			rotate("Link2", elapsed*v3);
+			rotate("Link3", elapsed*v4);
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),
 				std::cos(camera.elevation) * std::sin(camera.azimuth),
