@@ -4,18 +4,15 @@
 #include "Scene.hpp"
 #include "read_chunk.hpp"
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/rotate_vector.hpp>
 
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
-#include <cmath>
 
 static GLuint compile_shader(GLenum type, std::string const &source);
 static GLuint link_program(GLuint vertex_shader, GLuint fragment_shader);
@@ -68,13 +65,13 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	#ifdef _WIN32
+#ifdef _WIN32
 	//On windows, load OpenGL extensions:
 	if (!init_gl_shims()) {
 		std::cerr << "ERROR: failed to initialize shims." << std::endl;
 		return 1;
 	}
-	#endif
+#endif
 
 	//Set VSYNC + Late Swap (prevents crazy FPS):
 	if (SDL_GL_SetSwapInterval(-1) != 0) {
@@ -142,12 +139,13 @@ int main(int argc, char **argv) {
 		if (program_mvp == -1U) throw std::runtime_error("no uniform named mvp");
 		program_itmv = glGetUniformLocation(program, "itmv");
 		if (program_itmv == -1U) throw std::runtime_error("no uniform named itmv");
-		
+
 		program_to_light = glGetUniformLocation(program, "to_light");
 		if (program_to_light == -1U) throw std::runtime_error("no uniform named to_light");
 	}
-	
+
 	//------------ meshes ------------
+
 	Meshes meshes;
 
 	{ //add meshes to database:
@@ -155,11 +153,12 @@ int main(int argc, char **argv) {
 		attributes.Position = program_Position;
 		attributes.Normal = program_Normal;
 		attributes.Color = program_Color;
-		
+
 		meshes.load("meshes.blob", attributes);
 	}
 
 	//------------ scene ------------
+
 	Scene scene;
 	//set up camera parameters based on window:
 	scene.camera.fovy = glm::radians(60.0f);
@@ -168,9 +167,10 @@ int main(int argc, char **argv) {
 	//(transform will be handled in the update function below)
 
 	//add some objects from the mesh library:
-	auto add_object = [&](std::string const &name, glm::vec3 const &position, glm::quat const &rotation, glm::vec3 const &scale) {
+	auto add_object = [&](std::string const &name, glm::vec3 const &position, glm::quat const &rotation, glm::vec3 const &scale) -> Scene::Object & {
 		Mesh const &mesh = meshes.get(name);
-		Scene::Object object;
+		scene.objects.emplace_back();
+		Scene::Object &object = scene.objects.back();
 		object.transform.position = position;
 		object.transform.rotation = rotation;
 		object.transform.scale = scale;
@@ -180,10 +180,10 @@ int main(int argc, char **argv) {
 		object.program = program;
 		object.program_mvp = program_mvp;
 		object.program_itmv = program_itmv;
-		scene.objects[name] = object;
+		return object;
 	};
-	//Hard coding hierarchy
-	
+
+
 	{ //read objects to add from "scene.blob":
 		std::ifstream file("scene.blob", std::ios::binary);
 
@@ -211,74 +211,17 @@ int main(int argc, char **argv) {
 				add_object(name, entry.position, entry.rotation, entry.scale);
 			}
 		}
-
 	}
-	add_object("Ballon1-Pop", glm::vec3(0.0f,0.0f,1.0f), glm::quat(0.0f,0.0f,0.0f,1.0f), glm::vec3(1.0f));
 
-	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
-		auto quart_axis = scene.objects[name].transform.make_world_to_local() * axis;
-		auto quart = scene.objects[name].transform.rotation;
-		quart = glm::rotate(quart, degrees, glm::vec3(quart_axis.x, quart_axis.y, quart_axis.z));
-		scene.objects[name].transform.rotation = quart;
-		auto pos = scene.objects[name].transform.position;
-		pos = glm::rotate(pos, degrees, glm::vec3(axis.x, axis.y, axis.z));
-		scene.objects[name].transform.position = pos;
-	};
-	//Ended up hard coding because turns out lambda functions can't be recursive
-	auto rotate = [&](const std::string &name, float degrees) {
-		if (name == "Base") {
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
-			rotateObj("Base", degrees, axis);
-			rotateObj("Link1", degrees, axis);
-			rotateObj("Link2", degrees, axis);
-			rotateObj("Link3", degrees, axis);
-		}
-		if (name == "Link1") {
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link1", degrees, axis);
-			rotateObj("Link2", degrees, axis);
-			rotateObj("Link3", degrees, axis);
-		}
-		if (name == "Link2") {
-			auto pos1 = scene.objects[name].transform.position;
-			auto pos2 = scene.objects[name].transform.make_world_to_local() * glm::vec4(0.0f);
-			scene.objects[name].transform.position = glm::vec3(pos2.x, pos2.y, pos2.z);
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			auto pos3 = scene.objects["Link3"].transform.position;
-			auto pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position,0.0f);
-			printf("link3:%f,%f,%f\n", pos3.x, pos3.y, pos3.z);
-			printf("link3:%f,%f,%f\n", pos3world.x, pos3world.y, pos3world.z);
-			auto pos2world = scene.objects["Link2"].transform.make_local_to_world() * glm::vec4(pos1,0.0f);
-			printf("link2:%f,%f,%f\n", pos1.x, pos1.y, pos1.z);
-			printf("link2:%f,%f,%f\n", pos2world.x, pos2world.y, pos2world.z);
-			pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world - pos2world);
-			scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
-			rotateObj("Link3", degrees, axis);
-			rotateObj("Link2", degrees, axis);
-			pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position, 0.0f);
-			pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world + pos2world);
-			
-			scene.objects[name].transform.position = pos1 + scene.objects[name].transform.position;
-			scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
-		}
-		if (name == "Link3") {
-			auto pos = scene.objects[name].transform.position;
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link3", degrees, axis);
-			scene.objects[name].transform.position = pos;
-		}
-	};
-
+	add_object("Balloon1-Pop", glm::vec3(0.0f, 0.0f, 1.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
 	glm::vec2 mouse = glm::vec2(0.0f, 0.0f); //mouse position in [-1,1]x[-1,1] coordinates
 
 	struct {
 		float radius = 8.0f;
-		float elevation = -5.0f;
+		float elevation = -10.0f;
 		float azimuth = 0.0f;
 		glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
 	} camera;
-
-	float v1, v2, v3, v4;
 
 	//------------ game loop ------------
 
@@ -295,10 +238,13 @@ int main(int argc, char **argv) {
 					camera.elevation += -2.0f * (mouse.y - old_mouse.y);
 					camera.azimuth += -2.0f * (mouse.x - old_mouse.x);
 				}
-			} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-			} else if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_ESCAPE) {
+			}
+			else if (evt.type == SDL_MOUSEBUTTONDOWN) {
+			}
+			else if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_ESCAPE) {
 				should_quit = true;
-			} else if (evt.type == SDL_QUIT) {
+			}
+			else if (evt.type == SDL_QUIT) {
 				should_quit = true;
 				break;
 			}
@@ -311,37 +257,8 @@ int main(int argc, char **argv) {
 		previous_time = current_time;
 
 		{ //update game state:
-			auto state = SDL_GetKeyboardState(nullptr);
-			if (state[SDL_SCANCODE_X] && !state[SDL_SCANCODE_Z])
-				v1 = 0.5f;
-			else if (!state[SDL_SCANCODE_X] && state[SDL_SCANCODE_Z])
-				v1 = -0.5f;
-			else
-				v1 = 0.0f;
-			if (state[SDL_SCANCODE_S] && !state[SDL_SCANCODE_A])
-				v2 = 0.5f;
-			else if (!state[SDL_SCANCODE_S] && state[SDL_SCANCODE_A])
-				v2 = -0.5f;
-			else
-				v2 = 0.0f;
-			if (state[SDL_SCANCODE_APOSTROPHE] && !state[SDL_SCANCODE_SEMICOLON])
-				v3 = 0.5f;
-			else if (!state[SDL_SCANCODE_APOSTROPHE] && state[SDL_SCANCODE_SEMICOLON])
-				v3 = -0.5f;
-			else
-				v3 = 0.0f;
-			if (state[SDL_SCANCODE_SLASH] && !state[SDL_SCANCODE_PERIOD])
-				v4 = 0.5f;
-			else if (!state[SDL_SCANCODE_SLASH] && state[SDL_SCANCODE_PERIOD])
-				v4 = -0.5f;
-			else
-				v4 = 0.0f;
-			static float spin = 0.0f;
-			spin += (float)(elapsed * (2.0f * M_PI) / 10.0f);
-			rotate("Base", elapsed*v1);
-			rotate("Link1", elapsed*v2);
-			rotate("Link2", elapsed*v3);
-			rotate("Link3", elapsed*v4);
+
+			//camera:
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),
 				std::cos(camera.elevation) * std::sin(camera.azimuth),
@@ -351,7 +268,7 @@ int main(int argc, char **argv) {
 			glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
 			up = glm::normalize(up - glm::dot(up, out) * out);
 			glm::vec3 right = glm::cross(up, out);
-			
+
 			scene.camera.transform.rotation = glm::quat_cast(
 				glm::mat3(right, up, out)
 			);

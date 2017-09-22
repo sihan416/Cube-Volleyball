@@ -72,7 +72,7 @@ struct Scene {
 	};
 
 	Camera camera;
-	std::unordered_map<std::string, Object> objects;
+	std::list< Object > objects;
 	std::list< Light > lights;
 
 	void render();
