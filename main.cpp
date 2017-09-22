@@ -181,20 +181,9 @@ int main(int argc, char **argv) {
 		scene.objects[name] = object;
 	};
 	//Hard coding hierarchy
-	scene.objects["Base"].children.emplace_back("Link1");
-	scene.objects["Link1"].parent = "Base";
-	scene.objects["Link1"].children.emplace_back("Link2");
-	scene.objects["Link2"].parent = "Link1";
-	scene.objects["Link2"].children.emplace_back("Link3");
-	scene.objects["Link3"].parent = "Link2";
-
-
-/*
-	add_object("Tree", glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
-	add_object("Tree", glm::vec3(1.0f, 0.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
-	add_object("Tree", glm::vec3(0.0f, 1.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
-	add_object("Tree", glm::vec3(1.0f, 1.0f, 0.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
-*/
+	scene.objects["Link1"].transform.set_parent(&scene.objects["Base"].transform);
+	scene.objects["Link2"].transform.set_parent(&scene.objects["Link1"].transform);
+	scene.objects["Link3"].transform.set_parent(&scene.objects["Link2"].transform);
 	
 	{ //read objects to add from "scene.blob":
 		std::ifstream file("scene.blob", std::ios::binary);
@@ -228,16 +217,19 @@ int main(int argc, char **argv) {
 	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
 		glm::mat4 rm = glm::mat4_cast(scene.objects[name].transform.rotation);
 		rm = glm::rotate(rm, degrees, glm::vec3(axis.x, axis.y, axis.z));
-		//printf("%f,%f,%f,%f\n", axis.w, axis.x, axis.y, axis.z);
 		scene.objects[name].transform.rotation = glm::quat_cast(rm);
 	};
 	//Ended up hard coding because turns out lambda functions can't be recursive
 	auto rotate = [&](const std::string &name, float degrees) {
 		if (name == "Base") {
-			rotateObj("Base", degrees, scene.objects["Base"].transform.make_world_to_local() * glm::vec4(0.0f, 0.0f, 1.0f,0.0f));
-			rotateObj("Link1", degrees, scene.objects["Link1"].transform.make_world_to_local() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
-			rotateObj("Link2", degrees, scene.objects["Link2"].transform.make_world_to_local() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
-			rotateObj("Link3", degrees, scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f));
+			auto axis = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+			rotateObj("Base", degrees, axis);
+			auto t = scene.objects["Link1"].transform.make_parent_to_local();
+			rotateObj("Link1", degrees, scene.objects["Link1"].transform.make_world_to_local() * axis);
+			t = scene.objects["Link2"].transform.make_parent_to_local() * t;
+			rotateObj("Link2", degrees, scene.objects["Link2"].transform.make_world_to_local() * axis);
+			t = scene.objects["Link3"].transform.make_parent_to_local() * t;
+			rotateObj("Link3", degrees, scene.objects["Link3"].transform.make_world_to_local() * axis);
 		}
 		if (name == "Link1") {
 			//rotateObj("Link1", degrees, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -295,7 +287,7 @@ int main(int argc, char **argv) {
 		{ //update game state:
 			static float spin = 0.0f;
 			spin += (float)(elapsed * (2.0f * M_PI) / 10.0f);
-			rotate("Base", elapsed/5.0f);
+			rotate("Base", elapsed);
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),
 				std::cos(camera.elevation) * std::sin(camera.azimuth),
