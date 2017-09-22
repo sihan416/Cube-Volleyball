@@ -23,7 +23,6 @@ void Meshes::load(std::string const &filename, Attributes const &attributes) {
 		static_assert(sizeof(v3n3) == 36, "v3n3 is packed");
 		std::vector< v3n3 > data;
 		read_chunk(file, "v3n3", &data);
-		std::cout << "reached";
 		//upload data:
 		GLuint buffer = 0;
 		glGenBuffers(1, &buffer);

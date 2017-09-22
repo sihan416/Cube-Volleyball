@@ -37,8 +37,8 @@ struct Scene {
 		GLuint program_mvp = -1U; //uniform index for MVP matrix
 		GLuint program_itmv = -1U; //uniform index for inverse(transpose(mv)) matrix
 		//hierarchy info:
-		Object* parent;
-		std::unordered_map<std::string, Object*> children;
+		std::string parent = "";
+		std::vector<std::string> children;
 	};
 	struct Light {
 		Transform transform;
@@ -48,7 +48,7 @@ struct Scene {
 	};
 
 	Camera camera;
-	std::vector< Object > objects;
+	std::unordered_map< std::string, Object > objects;
 	std::vector< Light > lights;
 
 	void render();

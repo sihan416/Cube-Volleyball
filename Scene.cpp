@@ -50,7 +50,8 @@ glm::mat4 Scene::Camera::make_projection() const {
 //---------------------------
 
 void Scene::render() {
-	for (auto const &object : objects) {
+	for (auto const &kv : objects) {
+		auto const &object = kv.second;
 		//modelview matrix (local-to-world):
 		glm::mat4 mv = object.transform.make_local_to_world();
 
