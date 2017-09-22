@@ -121,7 +121,8 @@ void Scene::render() {
 		(void)mv;
 	}
 
-	for (auto const &object : objects) {
+	for (auto const &kv : objects) {
+		auto const &object = kv.second;
 		glm::mat4 local_to_world = object.transform.make_local_to_world();
 
 		//compute modelview+projection (object space to clip space) matrix for this object:
