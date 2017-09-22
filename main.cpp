@@ -24,7 +24,7 @@ static GLuint link_program(GLuint vertex_shader, GLuint fragment_shader);
 int main(int argc, char **argv) {
 	//Configuration:
 	struct {
-		std::string title = "Game2: Scene";
+		std::string title = "Robotics";
 		glm::uvec2 size = glm::uvec2(640, 480);
 	} config;
 
