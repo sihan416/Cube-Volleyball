@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <cmath>
+#include <thread>
 
 static GLuint compile_shader(GLenum type, std::string const &source);
 static GLuint link_program(GLuint vertex_shader, GLuint fragment_shader);
@@ -216,64 +217,56 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	//add_object("Balloon1-Pop", glm::vec3(0.0f, 0.0f, 1.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
-	//scene.objects["Link1"].transform.set_parent(&scene.objects["Base"].transform);
-	//scene.objects["Link2"].transform.set_parent(&scene.objects["Link1"].transform);
-	//scene.objects["Link3"].transform.set_parent(&scene.objects["Link2"].transform);
+	//add_object("Link3", glm::vec3(0.0f, 0.0f, 1.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
+
 	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
+		if (degrees == 0.0f) {
+			return;
+		}
+		auto pos = scene.objects[name].transform.position;
+		pos = glm::rotate(pos, degrees, glm::vec3(axis.x, axis.y, axis.z));
+		scene.objects[name].transform.position = pos;
 		auto quart_axis = scene.objects[name].transform.make_world_to_local() * axis;
 		auto quart = scene.objects[name].transform.rotation;
 		quart = glm::rotate(quart, degrees, glm::vec3(quart_axis.x, quart_axis.y, quart_axis.z));
 		scene.objects[name].transform.rotation = quart;
-		auto pos = scene.objects[name].transform.position;
-		pos = glm::rotate(pos, degrees, glm::vec3(axis.x, axis.y, axis.z));
-		scene.objects[name].transform.position = pos;
 	};
 
 	auto rotate = [&](const std::string &name, float degrees) {
+		
+		
 		if (name == "Base") {
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 			rotateObj("Base", degrees, axis);
 			rotateObj("Link1", degrees, axis);
 			rotateObj("Link2", degrees, axis);
 			rotateObj("Link3", degrees, axis);
 		}
 		if (name == "Link1") {
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 			rotateObj("Link1", degrees, axis);
 			rotateObj("Link2", degrees, axis);
 			rotateObj("Link3", degrees, axis);
-		}
-		if (name == "Link2") {
-			auto pos1 = scene.objects[name].transform.position;
-			auto pos2 = scene.objects[name].transform.make_world_to_local() * glm::vec4(0.0f);
-			scene.objects[name].transform.position = glm::vec3(pos2.x, pos2.y, pos2.z);
-			scene.objects["Link3"].transform.position = glm::vec3(pos2.x, pos2.y, pos2.z);
-
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			//auto pos3 = scene.objects["Link3"].transform.position;
-			//auto pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position, 0.0f);
-			//printf("link3:%f,%f,%f\n", pos3.x, pos3.y, pos3.z);
-			//printf("link3:%f,%f,%f\n", pos3world.x, pos3world.y, pos3world.z);
-			//auto pos2world = scene.objects["Link2"].transform.make_local_to_world() * glm::vec4(pos1, 0.0f);
-			//printf("link2:%f,%f,%f\n", pos1.x, pos1.y, pos1.z);
-			//printf("link2:%f,%f,%f\n", pos2world.x, pos2world.y, pos2world.z);
-			//pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world - pos2world);
-			//scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
-			rotateObj("Link3", degrees, axis);
+		};
+		if(name == "Link2") {
+			glm::vec3 pos5 = scene.objects["Link3"].transform.position;
+			glm::vec3 pos1 = scene.objects[name].transform.position;
+			scene.objects["Link3"].transform.position = pos5 - pos1;
+			scene.objects[name].transform.position = glm::vec3(0.0f);
+			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 			rotateObj("Link2", degrees, axis);
-			//pos3world = scene.objects["Link3"].transform.make_local_to_world() * glm::vec4(scene.objects["Link3"].transform.position, 0.0f);
-			//pos3 = scene.objects["Link3"].transform.make_world_to_local() * (pos3world + pos2world);
+			rotateObj("Link3", degrees, axis);
 
-			scene.objects[name].transform.position = pos1 + scene.objects[name].transform.position;
-			//scene.objects["Link3"].transform.position = glm::vec3(pos3.x, pos3.y, pos3.z);
+			scene.objects[name].transform.position = pos1;
+			scene.objects["Link3"].transform.position = scene.objects["Link3"].transform.position + pos1;
 		}
 		if (name == "Link3") {
-			auto pos = scene.objects[name].transform.position;
-			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+			glm::vec3 pos = scene.objects[name].transform.position;
+			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 			rotateObj("Link3", degrees, axis);
 			scene.objects[name].transform.position = pos;
 		}
+		//std::this_thread::sleep_for(std::chrono::seconds(10));
 	};
 
 
@@ -288,7 +281,8 @@ int main(int argc, char **argv) {
 
 	//------------ game loop ------------
 
-	float v1 = 0.0f, v2 = 0.0f, v3 = 0.0f, v4 = 0.0f;
+	float v1, v2, v3, v4;
+	float b1 = 0.2f, b2 = -0.2f, b3 = 0.2f;
 	bool should_quit = false;
 	while (true) {
 		static SDL_Event evt;
@@ -321,6 +315,27 @@ int main(int argc, char **argv) {
 		previous_time = current_time;
 
 		{ //update game state:
+			if (b1 != 0.0f) {
+				if (scene.objects["Balloon1"].transform.position.z < 1.0f)
+					b3 = 0.2f;
+				else if (scene.objects["Balloon1"].transform.position.z > 2.5f)
+					b3 = -0.2f;
+				scene.objects["Balloon1"].transform.position.z += elapsed * b3;
+			}
+			if (b3 != 0.0f) {
+				if (scene.objects["Balloon2"].transform.position.z <= 1.0f)
+					b3 = 0.2f;
+				else if (scene.objects["Balloon2"].transform.position.z >= 2.5f)
+					b3 = -0.2f;
+				scene.objects["Balloon2"].transform.position.z += elapsed * b3;
+			}
+			if (b3 != 0.0f) {
+				if (scene.objects["Balloon3"].transform.position.z <= 1.0f)
+					b3 = 0.2f;
+				else if (scene.objects["Balloon3"].transform.position.z >= 2.5f)
+					b3 = -0.2f;
+				scene.objects["Balloon3"].transform.position.z += elapsed * b3;
+			}
 			auto state = SDL_GetKeyboardState(nullptr);
 			if (state[SDL_SCANCODE_X] && !state[SDL_SCANCODE_Z])
 				v1 = 0.5f;
