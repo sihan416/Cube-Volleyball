@@ -283,6 +283,8 @@ int main(int argc, char **argv) {
 
 	float v1, v2, v3, v4;
 	float b1 = 0.2f, b2 = -0.2f, b3 = 0.2f;
+	float bt1, bt2, bt3;
+	int balloons = 3;
 	bool should_quit = false;
 	while (true) {
 		static SDL_Event evt;
@@ -315,27 +317,82 @@ int main(int argc, char **argv) {
 		previous_time = current_time;
 
 		{ //update game state:
+			
 			if (b1 != 0.0f) {
-				if (scene.objects["Balloon1"].transform.position.z < 1.0f)
-					b3 = 0.2f;
-				else if (scene.objects["Balloon1"].transform.position.z > 2.5f)
-					b3 = -0.2f;
-				scene.objects["Balloon1"].transform.position.z += elapsed * b3;
+				if (scene.objects["Balloon1"].transform.position.z <= 0.75f)
+					b1 = 0.2f;
+				if (scene.objects["Balloon1"].transform.position.z >= 2.25f)
+					b1 = -0.2f;
+				scene.objects["Balloon1"].transform.position.z += elapsed * b1;
+			}
+			if (b2 != 0.0f) {
+				if (scene.objects["Balloon2"].transform.position.z <= 0.75f)
+					b2 = 0.2f;
+				if (scene.objects["Balloon2"].transform.position.z >= 2.25f)
+					b2 = -0.2f;
+				scene.objects["Balloon2"].transform.position.z += elapsed * b2;
 			}
 			if (b3 != 0.0f) {
-				if (scene.objects["Balloon2"].transform.position.z <= 1.0f)
+				if (scene.objects["Balloon3"].transform.position.z <= 0.75f)
 					b3 = 0.2f;
-				else if (scene.objects["Balloon2"].transform.position.z >= 2.5f)
-					b3 = -0.2f;
-				scene.objects["Balloon2"].transform.position.z += elapsed * b3;
-			}
-			if (b3 != 0.0f) {
-				if (scene.objects["Balloon3"].transform.position.z <= 1.0f)
-					b3 = 0.2f;
-				else if (scene.objects["Balloon3"].transform.position.z >= 2.5f)
+				if (scene.objects["Balloon3"].transform.position.z >= 2.25f)
 					b3 = -0.2f;
 				scene.objects["Balloon3"].transform.position.z += elapsed * b3;
 			}
+			if (scene.objects.find("Balloon1") != scene.objects.end()) {
+				auto vec = scene.objects["Balloon1"].transform.position - scene.objects["Link3"].transform.position;
+				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
+				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
+					b1 = 0.0f;
+					add_object("Balloon1-Pop", scene.objects["Balloon1"].transform.position, scene.objects["Balloon1"].transform.rotation, glm::vec3(1.0f));
+					scene.objects.erase("Balloon1");
+					bt1 = 3.0f;
+				}
+			}
+			if (scene.objects.find("Balloon1-Pop") != scene.objects.end()) {
+				bt1 -= elapsed;
+				if (bt1 <= 0.0f) {
+					balloons--;
+					scene.objects.erase("Balloon1-Pop");
+				}
+			}
+			if (scene.objects.find("Balloon2") != scene.objects.end()) {
+				auto vec = scene.objects["Balloon2"].transform.position - scene.objects["Link3"].transform.position;
+				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
+				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
+					b2 = 0.0f;
+					add_object("Balloon2-Pop", scene.objects["Balloon2"].transform.position, scene.objects["Balloon2"].transform.rotation, glm::vec3(1.0f));
+					scene.objects.erase("Balloon2");
+					bt2 = 3.0f;
+				}
+			}
+			if (scene.objects.find("Balloon2-Pop") != scene.objects.end()) {
+				bt2 -= elapsed;
+				if (bt2 <= 0.0f) {
+					balloons--;
+					scene.objects.erase("Balloon2-Pop");
+				}
+			}
+			if (scene.objects.find("Balloon3") != scene.objects.end()) {
+				auto vec = scene.objects["Balloon3"].transform.position - scene.objects["Link3"].transform.position;
+				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
+				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
+					b3 = 0.0f;
+					add_object("Balloon3-Pop", scene.objects["Balloon3"].transform.position, scene.objects["Balloon3"].transform.rotation, glm::vec3(1.0f));
+					scene.objects.erase("Balloon3");
+					bt3 = 3.0f;
+				}
+			}
+			if (scene.objects.find("Balloon3-Pop") != scene.objects.end()) {
+				bt3 -= elapsed;
+				if (bt3 <= 0.0f) {
+					balloons--;
+					scene.objects.erase("Balloon3-Pop");
+				}
+			}
+			
+			if (balloons == 0)
+				should_quit = true;
 			auto state = SDL_GetKeyboardState(nullptr);
 			if (state[SDL_SCANCODE_X] && !state[SDL_SCANCODE_Z])
 				v1 = 0.5f;
