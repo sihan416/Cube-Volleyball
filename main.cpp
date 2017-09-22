@@ -4,10 +4,12 @@
 #include "Scene.hpp"
 #include "read_chunk.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -215,44 +217,50 @@ int main(int argc, char **argv) {
 
 	}
 	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
-		glm::mat4 rm = glm::mat4_cast(scene.objects[name].transform.rotation);
-		rm = glm::rotate(rm, degrees, glm::vec3(axis.x, axis.y, axis.z));
-		scene.objects[name].transform.rotation = glm::quat_cast(rm);
+		auto quart_axis = scene.objects[name].transform.make_world_to_local() * axis;
+		auto quart = scene.objects[name].transform.rotation;
+		quart = glm::rotate(quart, degrees, glm::vec3(quart_axis.x, quart_axis.y, quart_axis.z));
+		scene.objects[name].transform.rotation = quart;
+		auto pos = scene.objects[name].transform.position;
+		pos = glm::rotate(pos, degrees, glm::vec3(axis.x, axis.y, axis.z));
+		scene.objects[name].transform.position = pos;
 	};
 	//Ended up hard coding because turns out lambda functions can't be recursive
 	auto rotate = [&](const std::string &name, float degrees) {
 		if (name == "Base") {
-			auto axis = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
 			rotateObj("Base", degrees, axis);
-			auto t = scene.objects["Link1"].transform.make_parent_to_local();
-			rotateObj("Link1", degrees, scene.objects["Link1"].transform.make_world_to_local() * axis);
-			t = scene.objects["Link2"].transform.make_parent_to_local() * t;
-			rotateObj("Link2", degrees, scene.objects["Link2"].transform.make_world_to_local() * axis);
-			t = scene.objects["Link3"].transform.make_parent_to_local() * t;
-			rotateObj("Link3", degrees, scene.objects["Link3"].transform.make_world_to_local() * axis);
+			rotateObj("Link1", degrees, axis);
+			rotateObj("Link2", degrees, axis);
+			rotateObj("Link3", degrees, axis);
 		}
 		if (name == "Link1") {
-			//rotateObj("Link1", degrees, glm::vec3(1.0f, 0.0f, 0.0f));
-			//rotateObj("Link2", degrees, glm::vec3(1.0f, 0.0f, 1.0f));
-			//rotateObj("Link3", degrees, glm::vec3(1.0f, 0.0f, 1.0f));
+			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+			rotateObj("Link1", degrees, axis);
+			rotateObj("Link2", degrees, axis);
+			rotateObj("Link3", degrees, axis);
 		}
 		if (name == "Link2") {
-			//rotateObj("Link2", degrees, glm::vec3(1.0f, 0.0f, 1.0f));
-			//rotateObj("Link3", degrees, glm::vec3(1.0f, 0.0f, 1.0f));
+			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+			rotateObj("Link2", degrees, axis);
+			rotateObj("Link3", degrees, axis);
 		}
 		if (name == "Link3") {
-			//rotateObj("Link3", degrees, glm::vec3(1.0f, 0.0f, 1.0f));
+			auto axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+			rotateObj("Link3", degrees, axis);
 		}
 	};
 
 	glm::vec2 mouse = glm::vec2(0.0f, 0.0f); //mouse position in [-1,1]x[-1,1] coordinates
 
 	struct {
-		float radius = 10.0f;
+		float radius = 8.0f;
 		float elevation = -5.0f;
 		float azimuth = 0.0f;
 		glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
 	} camera;
+
+	float v1, v2, v3, v4;
 
 	//------------ game loop ------------
 
@@ -287,7 +295,7 @@ int main(int argc, char **argv) {
 		{ //update game state:
 			static float spin = 0.0f;
 			spin += (float)(elapsed * (2.0f * M_PI) / 10.0f);
-			rotate("Base", elapsed);
+			rotate("Link1", elapsed);
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),
 				std::cos(camera.elevation) * std::sin(camera.azimuth),
