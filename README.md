@@ -1,24 +1,22 @@
-NOTE: please fill in the first section with information about your game.
+# Cube Volleyball
 
-# Robotics
-
-Cave Miner is Sihan Wang's implementation of [Robot Fun Police](http://graphics.cs.cmu.edu/courses/15-466-f17/game2-designs/jmccann/) for game2 in 15-466-f17.
+Cube Volleybay is Sihan Wang's implementation of [Cube Volleybal](http://graphics.cs.cmu.edu/courses/15-466-f17/game3-designs/rmukunda/) for game3 in 15-466-f17.
 
 ![alt text](screenshots/Screenshot.png)
 
 ## Asset Pipeline
 
-The main assets of this game come from the provided blender file. They include a variety of meshes used to implement the game. A python script was used to load the vertex location and vertex color of the meshes into a meshes data structure in OpenGL. For simplicity reasons, instead of avoiding duplicate meshses, the script I used simply copied every single mesh present in the blender file which means crates were duplicated to be each of their own mesh.
+The main assets of this game come from the provided blender file. They include a variety of meshes used to implement the game. A python script was used to load the vertex location and vertex color of the meshes into a meshes data structure in OpenGL. For simplicity reasons, instead of avoiding duplicate meshses, the script I used simply copied every single mesh present in the blender file which means walls were duplicated to be each of their own mesh, the same applies to the two player cubes. Essentially the exact same method was used as game2.
 
 ## Architecture
 
-Most of the implementation was fairly straight forward. The scene was an unordered map of objects to be rendered. I used very simple lighting for the fragment shader and no material. I did not actually end up using hierarchy because I found lambda functions could not be recursive so it was simply easier to hard code. Rotations were performed using the rotate functiosn for quarternions and vectors. I found a very conveinet reflect point over vector function in the experimental glm library. Each object has its own position and rotations which allowed for independent manipulation of the objects in the world. The local to world and other conversions were used to determine the axis of rotation.
+Most of the implementation was fairly straight forward. The scene was an unordered map of objects to be rendered. I used very simple lighting for the fragment shader and no material, the faked hemispheric light is toned down from game2 to make the walls less white.  Each object has its own position and rotations which allowed for independent manipulation of the objects in the world. There is no rotation in this game meaning the ball does not rotate when colliding with any object. The collision is rather hard coded than based on some smart collision detection design. This choice was impart because the number objects colliding is fairly minimal and it was convenient to simply the necessary action when those collisions occured while checking those conditions. The values chosen for gravity and movement were fairly arbitrary, I tested them until I thought the values were reasonable. I did have 360% collision for both players. The physics effect on the ball on collision depends on the state of the player, but there is also a base increase in upward z velocity even if the player is not moving. The left and right movement and jumping all changes the physics effect on the ball on collision.
 
 ## Reflection
 
-In practicality it was not too difficult, however, I ended up on a 24 hour (I did pass out for a couple hours in the middle) straight hack session. (I know I said I would get it in by 8 in the morning but I kind of fell behind and then passed out around 8:30AM). The main problem was I completely misunderstood the matrixes used for conversions so I could not figure out why my object was not rotating properly for 8+ hours. Clearly this would not be an issue again in the future. The math performed is also poorly written as a result of this. I am submitting this as is due to the fact I am really out of time. If I had more time I would have rewritten the rotations to use hierarchy and cleaned up the math. In addition, I did not acutally bound any of the robotic arm rotations so there is a lot of potential clipping. That is something else I would like to address if I had more time.
+I think it turned out pretty well. I was actually trying to include full 3d movement, until I realized that made the game nearly impossible to play. I think if there was anything I really would change I would work on the actual assets abit more, maybe get a real net and a bit more physics when getting either the net case of out of bounds cases so the ball continues to move for a bit before resetting instead of instantly resetting as it does now.
 
-The design document was clear in most aspects, the only ambiguity was how collision was expected to work. I asksed about this in office hours, but in the end decided to simply ignore it due to time constraints and because it does not really detract from the mechanics of the game.
+The design document was clear in most aspects, the only ambiguity was how to deal with certain out of bounds rules. I generally stuck with known volleyball rules for those scenarios.
 
 
 # About Base2
