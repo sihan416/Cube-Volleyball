@@ -14,7 +14,7 @@ Most of the implementation was fairly straight forward. The scene was an unorder
 
 ## Reflection
 
-I think it turned out pretty well. I was actually trying to include full 3d movement, until I realized that made the game nearly impossible to play. I think if there was anything I really would change I would work on the actual assets abit more, maybe get a real net and a bit more physics when getting either the net case of out of bounds cases so the ball continues to move for a bit before resetting instead of instantly resetting as it does now.
+I think it turned out pretty well. I was actually trying to include full 3d movement, until I realized that made the game nearly impossible to play. I think if there was anything I really would change I would work on the actual assets abit more, maybe get a real net and a bit more physics when getting either the net case of out of bounds cases so the ball continues to move for a bit before resetting instead of instantly resetting as it does now. I also really wanted to add a score board, but that turned out to be far more difficult than I expected so I skipped that for now.
 
 The design document was clear in most aspects, the only ambiguity was how to deal with certain out of bounds rules. I generally stuck with known volleyball rules for those scenarios.
 
