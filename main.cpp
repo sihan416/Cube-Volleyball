@@ -24,7 +24,7 @@ static GLuint link_program(GLuint vertex_shader, GLuint fragment_shader);
 int main(int argc, char **argv) {
 	//Configuration:
 	struct {
-		std::string title = "Robotics";
+		std::string title = "Cube Volleyball";
 		glm::uvec2 size = glm::uvec2(640, 480);
 	} config;
 
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 			"in vec3 color;\n"
 			"out vec4 fragColor;\n"
 			"void main() {\n"
-			"   vec3 l = mix(normal,to_light,0.5);\n"
+			"   vec3 l = mix(normal,to_light,0.9);\n"
 			"	float light = max(0.0, dot(normalize(normal), l));\n"
 			"	fragColor = vec4(light * color, 1.0);\n"
 			"}\n"
@@ -219,61 +219,12 @@ int main(int argc, char **argv) {
 
 	//add_object("Link3", glm::vec3(0.0f, 0.0f, 1.0f), glm::quat(0.0f, 0.0f, 0.0f, 1.0f), glm::vec3(1.0f));
 
-	auto rotateObj = [&](const std::string &name, float degrees, glm::vec4 axis) {
-		if (degrees == 0.0f) {
-			return;
-		}
-		auto pos = scene.objects[name].transform.position;
-		pos = glm::rotate(pos, degrees, glm::vec3(axis.x, axis.y, axis.z));
-		scene.objects[name].transform.position = pos;
-		auto quart_axis = scene.objects[name].transform.make_world_to_local() * axis;
-		auto quart = scene.objects[name].transform.rotation;
-		quart = glm::rotate(quart, degrees, glm::vec3(quart_axis.x, quart_axis.y, quart_axis.z));
-		scene.objects[name].transform.rotation = quart;
-	};
-
-	auto rotate = [&](const std::string &name, float degrees) {
-		
-		
-		if (name == "Base") {
-			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
-			rotateObj("Base", degrees, axis);
-			rotateObj("Link1", degrees, axis);
-			rotateObj("Link2", degrees, axis);
-			rotateObj("Link3", degrees, axis);
-		}
-		if (name == "Link1") {
-			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link1", degrees, axis);
-			rotateObj("Link2", degrees, axis);
-			rotateObj("Link3", degrees, axis);
-		};
-		if(name == "Link2") {
-			glm::vec3 pos5 = scene.objects["Link3"].transform.position;
-			glm::vec3 pos1 = scene.objects[name].transform.position;
-			scene.objects["Link3"].transform.position = pos5 - pos1;
-			scene.objects[name].transform.position = glm::vec3(0.0f);
-			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link2", degrees, axis);
-			rotateObj("Link3", degrees, axis);
-
-			scene.objects[name].transform.position = pos1;
-			scene.objects["Link3"].transform.position = scene.objects["Link3"].transform.position + pos1;
-		}
-		if (name == "Link3") {
-			glm::vec3 pos = scene.objects[name].transform.position;
-			glm::vec4 axis = scene.objects[name].transform.make_local_to_world() * glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-			rotateObj("Link3", degrees, axis);
-			scene.objects[name].transform.position = pos;
-		}
-		//std::this_thread::sleep_for(std::chrono::seconds(10));
-	};
-
+	
 
 	glm::vec2 mouse = glm::vec2(0.0f, 0.0f); //mouse position in [-1,1]x[-1,1] coordinates
 
 	struct {
-		float radius = 8.0f;
+		float radius = 18.0f;
 		float elevation = -10.0f;
 		float azimuth = 0.0f;
 		glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -281,28 +232,32 @@ int main(int argc, char **argv) {
 
 	//------------ game loop ------------
 
-	float v1, v2, v3, v4;
-	float b1 = 0.2f, b2 = -0.2f, b3 = 0.2f;
-	float bt1, bt2, bt3;
-	int balloons = 3;
+	float p1y = 0.0f, p1z = 0.0f, p2y = 0.0f, p2z = 0.0f;
+	float by = 0.0f, bz = 0.0f;
+	int hits = 0;
+	int lastHit = 1;
+	auto player1 = &scene.objects["Cube"];
+	auto player2 = &scene.objects["Cube.001"];
+	auto ball = &scene.objects["Sphere"];
+	ball->transform.position.z = 7.5f;
+
 	bool should_quit = false;
 	while (true) {
 		static SDL_Event evt;
 		while (SDL_PollEvent(&evt) == 1) {
 			//handle input:
 			if (evt.type == SDL_MOUSEMOTION) {
-				glm::vec2 old_mouse = mouse;
-				mouse.x = (evt.motion.x + 0.5f) / float(config.size.x) * 2.0f - 1.0f;
-				mouse.y = (evt.motion.y + 0.5f) / float(config.size.y) *-2.0f + 1.0f;
-				if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-					camera.elevation += -2.0f * (mouse.y - old_mouse.y);
-					camera.azimuth += -2.0f * (mouse.x - old_mouse.x);
-				}
 			}
 			else if (evt.type == SDL_MOUSEBUTTONDOWN) {
 			}
 			else if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_ESCAPE) {
 				should_quit = true;
+			}
+			else if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_w && p1z == 0.0f && player1->transform.position.z == 0.5f) {
+				p1z = 10.0f;
+			}
+			else if (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_UP && p2z == 0.0f && player2->transform.position.z == 0.5f) {
+				p2z = 10.0f;
 			}
 			else if (evt.type == SDL_QUIT) {
 				should_quit = true;
@@ -317,112 +272,154 @@ int main(int argc, char **argv) {
 		previous_time = current_time;
 
 		{ //update game state:
-			
-			if (b1 != 0.0f) {
-				if (scene.objects["Balloon1"].transform.position.z <= 0.75f)
-					b1 = 0.2f;
-				if (scene.objects["Balloon1"].transform.position.z >= 2.25f)
-					b1 = -0.2f;
-				scene.objects["Balloon1"].transform.position.z += elapsed * b1;
-			}
-			if (b2 != 0.0f) {
-				if (scene.objects["Balloon2"].transform.position.z <= 0.75f)
-					b2 = 0.2f;
-				if (scene.objects["Balloon2"].transform.position.z >= 2.25f)
-					b2 = -0.2f;
-				scene.objects["Balloon2"].transform.position.z += elapsed * b2;
-			}
-			if (b3 != 0.0f) {
-				if (scene.objects["Balloon3"].transform.position.z <= 0.75f)
-					b3 = 0.2f;
-				if (scene.objects["Balloon3"].transform.position.z >= 2.25f)
-					b3 = -0.2f;
-				scene.objects["Balloon3"].transform.position.z += elapsed * b3;
-			}
-			if (scene.objects.find("Balloon1") != scene.objects.end()) {
-				auto vec = scene.objects["Balloon1"].transform.position - scene.objects["Link3"].transform.position;
-				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
-				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
-					b1 = 0.0f;
-					add_object("Balloon1-Pop", scene.objects["Balloon1"].transform.position, scene.objects["Balloon1"].transform.rotation, glm::vec3(1.0f));
-					scene.objects.erase("Balloon1");
-					bt1 = 3.0f;
-				}
-			}
-			if (scene.objects.find("Balloon1-Pop") != scene.objects.end()) {
-				bt1 -= elapsed;
-				if (bt1 <= 0.0f) {
-					balloons--;
-					scene.objects.erase("Balloon1-Pop");
-				}
-			}
-			if (scene.objects.find("Balloon2") != scene.objects.end()) {
-				auto vec = scene.objects["Balloon2"].transform.position - scene.objects["Link3"].transform.position;
-				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
-				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
-					b2 = 0.0f;
-					add_object("Balloon2-Pop", scene.objects["Balloon2"].transform.position, scene.objects["Balloon2"].transform.rotation, glm::vec3(1.0f));
-					scene.objects.erase("Balloon2");
-					bt2 = 3.0f;
-				}
-			}
-			if (scene.objects.find("Balloon2-Pop") != scene.objects.end()) {
-				bt2 -= elapsed;
-				if (bt2 <= 0.0f) {
-					balloons--;
-					scene.objects.erase("Balloon2-Pop");
-				}
-			}
-			if (scene.objects.find("Balloon3") != scene.objects.end()) {
-				auto vec = scene.objects["Balloon3"].transform.position - scene.objects["Link3"].transform.position;
-				auto vec4 = scene.objects["Link3"].transform.make_world_to_local() * glm::vec4(vec, 0.0f);
-				if (vec4.z > 0.0f && sqrtf(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z) < 0.9f) {
-					b3 = 0.0f;
-					add_object("Balloon3-Pop", scene.objects["Balloon3"].transform.position, scene.objects["Balloon3"].transform.rotation, glm::vec3(1.0f));
-					scene.objects.erase("Balloon3");
-					bt3 = 3.0f;
-				}
-			}
-			if (scene.objects.find("Balloon3-Pop") != scene.objects.end()) {
-				bt3 -= elapsed;
-				if (bt3 <= 0.0f) {
-					balloons--;
-					scene.objects.erase("Balloon3-Pop");
-				}
-			}
-			
-			if (balloons == 0)
-				should_quit = true;
 			auto state = SDL_GetKeyboardState(nullptr);
-			if (state[SDL_SCANCODE_X] && !state[SDL_SCANCODE_Z])
-				v1 = 0.5f;
-			else if (!state[SDL_SCANCODE_X] && state[SDL_SCANCODE_Z])
-				v1 = -0.5f;
+			if (state[SDL_SCANCODE_A] && !state[SDL_SCANCODE_D])
+				p1y = 5.0f;
+			else if (!state[SDL_SCANCODE_A] && state[SDL_SCANCODE_D])
+				p1y = -5.0f;
 			else
-				v1 = 0.0f;
-			if (state[SDL_SCANCODE_S] && !state[SDL_SCANCODE_A])
-				v2 = 0.5f;
-			else if (!state[SDL_SCANCODE_S] && state[SDL_SCANCODE_A])
-				v2 = -0.5f;
+				p1y = 0.0f;
+			if (state[SDL_SCANCODE_LEFT] && !state[SDL_SCANCODE_RIGHT])
+				p2y = 5.0f;
+			else if (!state[SDL_SCANCODE_LEFT] && state[SDL_SCANCODE_RIGHT])
+				p2y = -5.0f;
 			else
-				v2 = 0.0f;
-			if (state[SDL_SCANCODE_APOSTROPHE] && !state[SDL_SCANCODE_SEMICOLON])
-				v3 = 0.5f;
-			else if (!state[SDL_SCANCODE_APOSTROPHE] && state[SDL_SCANCODE_SEMICOLON])
-				v3 = -0.5f;
-			else
-				v3 = 0.0f;
-			if (state[SDL_SCANCODE_SLASH] && !state[SDL_SCANCODE_PERIOD])
-				v4 = 0.5f;
-			else if (!state[SDL_SCANCODE_SLASH] && state[SDL_SCANCODE_PERIOD])
-				v4 = -0.5f;
-			else
-				v4 = 0.0f;
+				p2y = 0.0f;
 
-			rotate("Base", elapsed*v1);
-			rotate("Link1", elapsed*v2);
-			rotate("Link2", elapsed*v3);
-			rotate("Link3", elapsed*v4);
+			//Player and ball collision
+			if ((abs(ball->transform.position.z - player1->transform.position.z) <= 1.0f &&
+					abs(ball->transform.position.y - player1->transform.position.y) <= 0.5f) ||
+				(abs(ball->transform.position.z - player1->transform.position.z) <= 0.5f &&
+					abs(ball->transform.position.y - player1->transform.position.y) <= 1.0f) ||
+				std::pow(ball->transform.position.y- player1->transform.position.y + 0.5f,2.0f) + 
+					std::pow(ball->transform.position.z - player1->transform.position.z + 0.5f, 2.0f) <= 0.25 ||
+				std::pow(ball->transform.position.y - player1->transform.position.y - 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player1->transform.position.z + 0.5f, 2.0f) <= 0.25 || 
+				std::pow(ball->transform.position.y - player1->transform.position.y + 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player1->transform.position.z - 0.5f, 2.0f) <= 0.25 || 
+				std::pow(ball->transform.position.y - player1->transform.position.y - 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player1->transform.position.z - 0.5f, 2.0f) <= 0.25){
+				if (lastHit != 1) {
+					lastHit = 1;
+					hits = 0;
+				}
+				if(bz < 0.0f)
+					hits++;
+				by += (ball->transform.position.y - player1->transform.position.y) + p1y;
+				float temp = bz;
+				bz = p1z + 2.0f;
+				if (p1z != 0.0f)
+					p1z = temp;
+			}
+			else if ((abs(ball->transform.position.z - player2->transform.position.z) <= 1.0f &&
+					abs(ball->transform.position.y - player2->transform.position.y) <= 0.5f) ||
+				(abs(ball->transform.position.z - player2->transform.position.z) <= 0.5f &&
+					abs(ball->transform.position.y - player2->transform.position.y) <= 1.0f) ||
+				std::pow(ball->transform.position.y - player2->transform.position.y + 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player2->transform.position.z + 0.5f, 2.0f) <= 0.25 ||
+				std::pow(ball->transform.position.y - player2->transform.position.y - 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player2->transform.position.z + 0.5f, 2.0f) <= 0.25 ||
+				std::pow(ball->transform.position.y - player2->transform.position.y + 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player2->transform.position.z - 0.5f, 2.0f) <= 0.25 ||
+				std::pow(ball->transform.position.y - player2->transform.position.y - 0.5f, 2.0f) +
+					std::pow(ball->transform.position.z - player2->transform.position.z - 0.5f, 2.0f) <= 0.25) {
+				if (lastHit != 2) {
+					lastHit = 2;
+					hits = 0;
+				}
+				if (bz < 0.0f)
+					hits++;
+				by += (ball->transform.position.y - player2->transform.position.y) + p2y;
+				float temp = bz;
+				bz = p2z + 2.0f;
+				if (p2z != 0.0f)
+					p2z = temp;
+
+			}
+			else if (ball->transform.position.z != 0.5f) {
+				bz = bz - 10.0f*elapsed;
+			}
+			by = by * std::pow(0.9f,elapsed);
+			if (player2->transform.position.z != 0.5f)
+				p2z = p2z - 10.0f*elapsed;
+			if (player1->transform.position.z != 0.5f)
+				p1z = p1z - 10.0f*elapsed;
+
+			//Translations
+			player1->transform.position.y += elapsed * p1y;
+			player1->transform.position.z += elapsed * p1z;
+			player2->transform.position.y += elapsed * p2y;
+			player2->transform.position.z += elapsed * p2z;
+			ball->transform.position.y += elapsed * by;
+			ball->transform.position.z += elapsed * bz;
+
+			//Player and world collision
+			if (player1->transform.position.z <= 0.5f) {
+				p1z = 0.0f;
+				player1->transform.position.z = 0.5f;
+			}
+			if (player1->transform.position.y > 9.5f) {
+				p1y = 0.0f;
+				player1->transform.position.y = 9.5f;
+			} else if(player1->transform.position.y < 1.0f) {
+				p1y = 0.0f;
+				player1->transform.position.y = 1.0f;
+			}
+			if (player2->transform.position.z <= 0.5f) {
+				p2z = 0.0f;
+				player2->transform.position.z = 0.5f;
+			}
+			if (player2->transform.position.y > -1.0f) {
+				p2y = 0.0f;
+				player2->transform.position.y = -1.0f;
+			}
+			else if (player2->transform.position.y < -9.5f) {
+				p2y = 0.0f;
+				player2->transform.position.y = -9.5f;
+			}
+
+			//Point condition
+			if (ball->transform.position.z <= 0.5f || hits >= 4 ||
+				(std::abs(ball->transform.position.y) <= 0.5f && ball->transform.position.z <= 3.5f) ||
+				ball->transform.position.y >= 9.5f || ball->transform.position.y <= -9.5){
+				bz = 0.0f;
+				by = 0.0f;
+				player1->transform.position = glm::vec3(0.0f, 5.0f, 0.5f);
+				player2->transform.position = glm::vec3(0.0f, -5.0f, 0.5f);
+				//Net
+				if (std::abs(ball->transform.position.y) <= 0.5f && ball->transform.position.z <= 3.5f) {
+					if (lastHit == 1) {
+						lastHit = 2;
+						ball->transform.position = glm::vec3(0.0f, -5.0f, 7.5f);
+					}
+					else {
+						ball->transform.position = glm::vec3(0.0f, 5.0f, 7.5f);
+						lastHit = 1;
+					}
+				}
+				//Ball dropped
+				else if (ball->transform.position.y < 0.0f && ball->transform.position.y > -9.5) {
+					ball->transform.position = glm::vec3(0.0f, 5.0f, 7.5f);
+					lastHit = 1;
+				}
+				else if (ball->transform.position.y > 0.0f && ball->transform.position.y < 9.5){
+					ball->transform.position = glm::vec3(0.0f, -5.0f, 7.5f);
+					lastHit = 2;
+				}
+				//Out of bounds
+				else {
+					if (lastHit == 1) {
+						lastHit = 2;
+						ball->transform.position = glm::vec3(0.0f, -5.0f, 7.5f);
+					}
+					else {
+						ball->transform.position = glm::vec3(0.0f, 5.0f, 7.5f);
+						lastHit = 1;
+					}
+				}
+				hits = 0;
+			}
+			
 			//camera:
 			scene.camera.transform.position = camera.radius * glm::vec3(
 				std::cos(camera.elevation) * std::cos(camera.azimuth),
